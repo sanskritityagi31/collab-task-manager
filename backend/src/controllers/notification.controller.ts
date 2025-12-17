@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
 
-export const getMyNotifications = async (
+export const getNotifications = async (
   req: Request,
   res: Response
 ) => {

@@ -1,39 +1,91 @@
 import { Request, Response } from "express";
-import { AuthService } from "../services/auth.service";
-import { RegisterDto, LoginDto } from "../dtos/auth.dto";
-import { UserRepository } from "../repositories/user.repository";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import prisma from "../prisma";
 
-export const AuthController = {
-  async register(req: Request, res: Response) {
-    const data = RegisterDto.parse(req.body);
+const JWT_SECRET = process.env.JWT_SECRET!;
 
-    const user = await AuthService.register(
-      data.name,
-      data.email,
-      data.password
-    );
+/* ---------------- REGISTER ---------------- */
+export const register = async (req: Request, res: Response) => {
+  const { name, email, password } = req.body;
 
-    res.status(201).json({ user });
-  },
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
 
-  async login(req: Request, res: Response) {
-    const data = LoginDto.parse(req.body);
+  if (existingUser) {
+    return res.status(400).json({ message: "User already exists" });
+  }
 
-    const { user, token } = await AuthService.login(
-      data.email,
-      data.password
-    );
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "lax",
-    });
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashedPassword,
+    },
+  });
 
-    res.json({ user });
-  },
+  res.status(201).json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+  });
+};
 
-  async me(req: any, res: Response) {
-    const user = await UserRepository.findById(req.userId);
-    res.json(user);
-  },
+/* ---------------- LOGIN ---------------- */
+export const login = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  const isValid = await bcrypt.compare(password, user.password);
+  if (!isValid) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+    expiresIn: "7d",
+  });
+
+  res.cookie("token", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,
+  });
+
+  res.json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+  });
+};
+
+/* ---------------- ME ---------------- */
+export const me = async (req: Request, res: Response) => {
+  // req.user is injected by auth middleware
+  // @ts-ignore
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  });
+
+  res.json(user);
 };
