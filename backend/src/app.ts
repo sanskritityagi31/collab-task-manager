@@ -1,46 +1,25 @@
-import express from "express";
-import cors from "cors";
-import cookieParser from "cookie-parser";
+import http from "http";
+import { Server } from "socket.io";
 import dotenv from "dotenv";
-
-import authRoutes from "./routes/auth.routes";
-import taskRoutes from "./routes/task.routes";
-import userRoutes from "./routes/user.routes";
-import notificationRoutes from "./routes/notification.routes";
+import app from "./app";
 
 dotenv.config();
 
-const app = express();
+const server = http.createServer(app);
 
-/* ---------------- MIDDLEWARES ---------------- */
-
-app.use(
-  cors({
-    origin: "http://localhost:5173", // ✅ FIXED
-    credentials: true,               // ✅ REQUIRED FOR COOKIES
-  })
-);
-
-app.use(express.json());
-app.use(cookieParser());
-
-/* ---------------- HEALTH CHECK ---------------- */
-
-app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "OK" });
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    credentials: true
+  }
 });
 
-/* ---------------- ROUTES ---------------- */
+io.on("connection", () => {});
 
-app.use("/api/auth", authRoutes);
-app.use("/api/tasks", taskRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/notifications", notificationRoutes);
+export const getIO = () => io;
 
-/* ---------------- FALLBACK ---------------- */
+const PORT = process.env.PORT || 5000;
 
-app.use((_req, res) => {
-  res.status(404).json({ error: "Route not found" });
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
-
-export default app;
