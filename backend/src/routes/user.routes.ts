@@ -1,10 +1,9 @@
-import { Router } from "express";
-import { getAllUsers } from "../controllers/user.controller";
+import express from "express";
+import { UserController } from "../controllers/user.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 
-const router = Router();
+const router = express.Router();
 
-// Get all users (for task assignment dropdown)
-router.get("/", authMiddleware, getAllUsers);
+router.get("/", authMiddleware, UserController.getUsers);
 
 export default router;

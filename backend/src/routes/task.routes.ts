@@ -1,17 +1,12 @@
-import { Router } from "express";
+import express from "express";
+import { TaskController } from "../controllers/task.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import {
-  createTask,
-  getAllTasks,
-  updateTask,
-  deleteTask,
-} from "../controllers/task.controller";
 
-const router = Router();
+const router = express.Router();
 
-router.get("/", authMiddleware, getAllTasks);
-router.post("/", authMiddleware, createTask);
-router.patch("/:id", authMiddleware, updateTask);
-router.delete("/:id", authMiddleware, deleteTask);
+router.post("/", authMiddleware, TaskController.createTask);
+router.get("/", authMiddleware, TaskController.getTasks);
+router.put("/:id", authMiddleware, TaskController.updateTask);
+router.delete("/:id", authMiddleware, TaskController.deleteTask);
 
 export default router;

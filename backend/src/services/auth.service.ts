@@ -1,55 +1,41 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import prisma from "../prisma";
+import { UserRepository } from "../repositories/user.repository";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+const JWT_SECRET = process.env.JWT_SECRET!;
 
-interface RegisterInput {
-  name: string;
-  email: string;
-  password: string;
-}
+export const AuthService = {
+  async register(name: string, email: string, password: string) {
+    const existing = await UserRepository.findByEmail(email);
+    if (existing) {
+      throw new Error("User already exists");
+    }
 
-export const registerUser = async (data: RegisterInput) => {
-  const existingUser = await prisma.user.findUnique({
-    where: { email: data.email },
-  });
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await UserRepository.create({
+      name,
+      email,
+      password: hashed,
+    });
 
-  if (existingUser) {
-    throw new Error("User already exists");
-  }
+    return user;
+  },
 
-  const hashedPassword = await bcrypt.hash(data.password, 10);
+  async login(email: string, password: string) {
+    const user = await UserRepository.findByEmail(email);
+    if (!user) {
+      throw new Error("Invalid credentials");
+    }
 
-  const user = await prisma.user.create({
-    data: {
-      name: data.name,
-      email: data.email,
-      password: hashedPassword,
-    },
-  });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      throw new Error("Invalid credentials");
+    }
 
-  return user;
-};
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
-export const loginUser = async (email: string, password: string) => {
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
-
-  if (!user) {
-    throw new Error("Invalid credentials");
-  }
-
-  const isMatch = await bcrypt.compare(password, user.password);
-
-  if (!isMatch) {
-    throw new Error("Invalid credentials");
-  }
-
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
-    expiresIn: "7d",
-  });
-
-  return { user, token };
+    return { user, token };
+  },
 };
