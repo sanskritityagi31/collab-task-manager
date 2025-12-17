@@ -1,31 +1,63 @@
-import { useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import CreateTask from "./pages/CreateTask";
+import { useMe } from "./hooks/useMe";
 
-function App() {
-  const [page, setPage] = useState<
-    "login" | "register" | "dashboard"
-  >("login");
+/* ---------------- PROTECTED ROUTE ---------------- */
 
-  return (
-    <>
-      {page === "login" && (
-        <Login
-          onRegister={() => setPage("register")}
-          onSuccess={() => setPage("dashboard")}
-        />
-      )}
+function ProtectedRoute({ children }: { children: JSX.Element }) {
+  const { data: me, isLoading } = useMe();
 
-      {page === "register" && (
-        <Register
-          onLogin={() => setPage("login")}
-        />
-      )}
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
 
-      {page === "dashboard" && <Dashboard />}
-    </>
-  );
+  if (!me) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 }
 
-export default App;
+/* ---------------- APP ROUTES ---------------- */
+
+export default function App() {
+  return (
+    <Routes>
+      {/* Root */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
+      {/* Public Auth Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      {/* Protected Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tasks/create"
+        element={
+          <ProtectedRoute>
+            <CreateTask />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+}

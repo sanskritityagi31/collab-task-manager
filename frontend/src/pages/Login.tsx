@@ -1,14 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLogin } from "../hooks/useAuth";
 
-export default function Login({
-  onRegister,
-  onSuccess,
-}: {
-  onRegister: () => void;
-  onSuccess: () => void;
-}) {
-  const { mutate, isPending, error } = useLogin();
+export default function Login() {
+  const navigate = useNavigate();
+  const { mutate: login, isLoading } = useLogin();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,62 +12,69 @@ export default function Login({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    mutate(
+    console.log("LOGIN SUBMITTED");
+
+    login(
       { email, password },
       {
         onSuccess: () => {
-          onSuccess(); // 🚀 GO TO DASHBOARD
+          console.log("LOGIN SUCCESS");
+          navigate("/dashboard");
+        },
+        onError: (error: any) => {
+          console.error("LOGIN ERROR:", error);
+          alert(
+            error?.response?.data?.message ||
+              "Login failed. Please check your credentials."
+          );
         },
       }
     );
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <form
         onSubmit={handleSubmit}
-        className="bg-gray-800 p-6 rounded w-80 space-y-4"
+        className="w-full max-w-sm space-y-4 rounded bg-white p-6 shadow"
       >
-        <h2 className="text-xl font-bold text-center">Login</h2>
+        <h1 className="text-center text-xl font-bold">Login</h1>
 
         <input
-          className="w-full p-2 rounded bg-gray-700"
+          type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          className="w-full rounded border px-3 py-2"
           required
         />
 
         <input
           type="password"
-          className="w-full p-2 rounded bg-gray-700"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="w-full rounded border px-3 py-2"
           required
         />
 
         <button
           type="submit"
-          disabled={isPending}
-          className="w-full bg-green-600 py-2 rounded"
+          disabled={isLoading}
+          className="w-full rounded bg-blue-600 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {isPending ? "Logging in..." : "Login"}
+          {isLoading ? "Logging in..." : "Login"}
         </button>
 
-        {error && (
-          <p className="text-red-400 text-sm text-center">
-            Login failed
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={onRegister}
-          className="w-full text-blue-400 underline text-sm"
-        >
-          Don’t have an account? Register
-        </button>
+        <p className="text-center text-sm text-gray-600">
+          Don&apos;t have an account?{" "}
+          <span
+            onClick={() => navigate("/register")}
+            className="cursor-pointer text-blue-600 underline"
+          >
+            Register
+          </span>
+        </p>
       </form>
     </div>
   );

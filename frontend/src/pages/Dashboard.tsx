@@ -1,13 +1,28 @@
-import { useSocketNotifications } from "../hooks/useSocketNotifications";
 import TaskCard from "../components/TaskCard";
 import { useMe } from "../hooks/useMe";
 import { useTasks } from "../hooks/useTasks";
+import { useSocketNotifications } from "../hooks/useSocketNotifications";
 
 export default function Dashboard() {
-  const { data: me } = useMe();
-  useSocketNotifications(me?.id);
+  const { data: me, isLoading: meLoading } = useMe();
+  const {
+    data: tasks = [],
+    isLoading: tasksLoading,
+    refetch,
+  } = useTasks();
 
-  const { data: tasks = [] } = useTasks();
+  /* 🔴 REAL-TIME UPDATES */
+  useSocketNotifications(() => {
+    refetch();
+  });
+
+  if (meLoading || tasksLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-gray-600">
+        Loading dashboard...
+      </div>
+    );
+  }
 
   const now = new Date();
 
@@ -23,7 +38,7 @@ export default function Dashboard() {
     (t: any) =>
       t.dueDate &&
       new Date(t.dueDate) < now &&
-      t.status !== "DONE"
+      t.status !== "COMPLETED"
   );
 
   return (
@@ -35,7 +50,7 @@ export default function Dashboard() {
         </h1>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-6 space-y-10">
+      <main className="mx-auto max-w-6xl space-y-10 px-6 py-6">
         {/* Assigned to Me */}
         <section>
           <h2 className="mb-4 text-xl font-semibold">
@@ -74,7 +89,7 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* Overdue */}
+        {/* Overdue Tasks */}
         <section>
           <h2 className="mb-4 text-xl font-semibold text-red-600">
             Overdue Tasks

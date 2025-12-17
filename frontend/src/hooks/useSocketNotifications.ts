@@ -1,19 +1,24 @@
 import { useEffect } from "react";
-import { connectSocket } from "../lib/socket";
-import { toastSuccess } from "../lib/toast";
+import { io } from "socket.io-client";
 
-export const useSocketNotifications = (userId?: string) => {
+const socket = io("http://localhost:5000", {
+  withCredentials: true,
+});
+
+export const useSocketNotifications = (onUpdate: () => void) => {
   useEffect(() => {
-    if (!userId) return;
-
-    const socket = connectSocket(userId);
+    socket.on("task:created", onUpdate);
+    socket.on("task:updated", onUpdate);
 
     socket.on("task:assigned", (data) => {
-      toastSuccess(`📝 ${data.message}`);
+      alert(`📌 New task assigned: ${data.task.title}`);
+      onUpdate();
     });
 
     return () => {
+      socket.off("task:created");
+      socket.off("task:updated");
       socket.off("task:assigned");
     };
-  }, [userId]);
+  }, [onUpdate]);
 };
